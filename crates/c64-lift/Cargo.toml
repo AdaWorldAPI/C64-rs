@@ -1,0 +1,17 @@
+[package]
+name = "c64-lift"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Probe A — lifts the vendored MOS 6502 SLEIGH spec through r2sleigh to R2IL. No decoder logic of its own; see CLAUDE.md's hard rules."
+build = "build.rs"
+
+[dependencies]
+r2sleigh-lift = { git = "https://github.com/AdaWorldAPI/r2sleigh", branch = "master" }
+r2il = { git = "https://github.com/AdaWorldAPI/r2sleigh", branch = "master" }
+
+[build-dependencies]
+sleigh-compiler = "2.0"
+
+[dev-dependencies]
+c64-core = { path = "../c64-core" }

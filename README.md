@@ -14,8 +14,11 @@ for the full report and probe sequence.
 ## Status
 
 - **Probe B (physics)** — `crates/c64-core`: flat 64 KiB `Memory` + PRG
-  loader + packed `AddressMask` bitset. In progress.
-- **Probe A (lift parity)** — not started.
+  loader + packed `AddressMask` bitset + `RowStore` lane join. In progress.
+- **Probe A (lift parity)** — `crates/c64-lift`: real 6502 lift through the
+  vendored, unmodified Ghidra SLEIGH spec (`vendor/ghidra-6502/`) via
+  `r2sleigh-lift`, with hand-computed branch/call targets checked against
+  the actual lifted R2IL. Partial — no Ghidra-headless parity oracle yet.
 - **Probe C (transcoding seam)** — spec only, gated on operator sign-off
   for classid minting.
 

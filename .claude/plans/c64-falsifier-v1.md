@@ -74,19 +74,50 @@ This repo builds (a) — Probes A and B — autonomously. Probe C's OGAR/classid
 half is written up here as a spec, not implemented, until the operator says
 go.
 
-## Probe A — lift parity (not yet started in this repo)
+## Probe A — lift parity (partially DONE: `crates/c64-lift`)
 
-1. Fixture: `LDA #$10 / AND #$0F / STA $0400 / LDX #$03 / loop: DEX / BNE
-   loop / JSR sub / RTS / sub: INX / RTS` at load address `$0801`.
-2. Compile 6502 `.sla`+pspec via Ghidra's `sleighCompile` Gradle task.
-3. `Disassembler::from_sla(sla_bytes, pspec_xml, "6502")` — no r2sleigh-lift
-   code changes required.
-4. `lift_block()` over the fixture → `R2ILBlock`.
-5. **Parity oracle**: same bytes through Ghidra's own native 6502
-   decode/P-code (headless analyzer or a small Ghidra script) at the same
-   load address. Compare per-instruction: address, size, mnemonic,
-   branch/call target, return-classification, and P-code↔R2IL
-   correspondence where normalizable (e.g. `INT_ADD` → `R2ILOp::IntAdd`).
+**What's shipped:**
+
+1. The vendored, unmodified `6502.slaspec`/`.pspec`/`.cspec`/`.ldefs` from
+   `AdaWorldAPI/ghidra` live at `vendor/ghidra-6502/` (Apache-2.0, provenance
+   in `vendor/ghidra-6502/NOTICE.md`).
+2. `crates/c64-lift/build.rs` compiles `6502.slaspec` at build time via the
+   `sleigh-compiler` crate (a Rust binding over Ghidra's own C++ SLEIGH
+   compiler) — **no Gradle/Java Ghidra build needed**, contrary to the
+   original plan's step 2. This was verified to actually work in-sandbox,
+   not assumed: `SleighCompiler::compile` on the real `6502.slaspec`
+   succeeds with only benign warnings (1 NOP constructor, one unreferenced
+   `ADDR8` table).
+3. `Disassembler::from_sla(sla_bytes, pspec_xml, "6502")` — exactly as
+   planned, zero r2sleigh-lift code changes. `r2sleigh-lift` and `r2il` are
+   pulled as git dependencies on `AdaWorldAPI/r2sleigh`'s **`master`**
+   branch (not `main` — verified against the actual repo, the plan's
+   assumption was wrong).
+4. `c64-lift::lift()` wraps `lift_block()` over the fixture → `R2ILBlock`.
+5. **Parity check (partial, not the full oracle below)**: the fixture's
+   hand-computed BNE target ($0809) and JSR target ($0810) — see
+   `c64-core::fixtures` — are asserted against the REAL lifted R2IL's
+   `CBranch`/`Call` op targets. Both agree. Verified as a real falsifier by
+   a disable-run (temporarily corrupting the expected constant, confirming
+   the test fails, then restoring it) — not just asserted.
+
+**What's NOT done** — the full oracle this section originally specified:
+
+- No Ghidra headless-analyzer comparison. This checks r2sleigh's lift
+  against hand-derived 6502 addressing-mode semantics, not against
+  Ghidra's own native decode of the same bytes. That's a materially
+  weaker parity claim: it proves r2sleigh + the vendored spec agree with
+  *our* understanding of 6502 addressing, not that they agree with
+  Ghidra's *own* independent decode path (which is the whole point of a
+  parity oracle — two independent implementations of the same spec should
+  never both be wrong the same way, but they CAN both encode a shared
+  misunderstanding of the spec they're compiled from).
+- No per-instruction address/size/mnemonic table comparison — only the two
+  branch/call targets and a return-op count are checked.
+- Running Ghidra headless (needs its full Gradle/Java build, or a
+  pre-built Ghidra distribution) was not attempted this session — real,
+  likely substantial effort (Ghidra's build is large), left for a future
+  session rather than rushed.
 
 ## Probe B — physics (this repo, `crates/c64-core`)
 
