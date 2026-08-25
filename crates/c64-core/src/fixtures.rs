@@ -44,6 +44,28 @@ pub const LOOP_ADDR: u16 = 0x0809;
 /// The address of the `sub:` label (`INX`).
 pub const SUB_ADDR: u16 = 0x0810;
 
+/// The address of every instruction's first byte, in program order.
+///
+/// This is transcribed from the hand-annotated assembly listing above, not
+/// decoded — decoding a 6502 instruction stream is explicitly Probe A's job
+/// (via `r2sleigh`/Ghidra SLEIGH), never re-implemented here. See
+/// `CLAUDE.md`'s "No new 6502 decoder" hard rule. This constant exists so
+/// `AddressMask`-shaped code (the mask-native currency Probe C will build
+/// on) has known-correct ground truth to test against before any decoder
+/// exists.
+pub const INSTRUCTION_START_ADDRS: &[u16] = &[
+    0x0800, // LDA #$10
+    0x0802, // AND #$0F
+    0x0804, // STA $0400
+    0x0807, // LDX #$03
+    0x0809, // DEX          (loop:)
+    0x080A, // BNE loop
+    0x080C, // JSR sub
+    0x080F, // RTS
+    0x0810, // INX          (sub:)
+    0x0811, // RTS
+];
+
 /// A PRG-shaped byte stream: [`LOAD_ADDR`] as a little-endian 2-byte header,
 /// then [`CODE_BYTES`] — ready for [`crate::Memory::load_prg`].
 pub fn prg_bytes() -> Vec<u8> {
@@ -51,6 +73,19 @@ pub fn prg_bytes() -> Vec<u8> {
     prg.extend_from_slice(&LOAD_ADDR.to_le_bytes());
     prg.extend_from_slice(CODE_BYTES);
     prg
+}
+
+/// Build an [`AddressMask`](crate::AddressMask) selecting exactly
+/// [`INSTRUCTION_START_ADDRS`] — the ground-truth "instruction-start" lane
+/// a future Probe A decoder must reproduce, and the shape Probe C's
+/// `RowStore` lane population will eventually take (mask-native, never a
+/// `Vec<u16>`, except through the one named `materialize_addresses` exit).
+pub fn instruction_start_mask() -> crate::AddressMask {
+    let mut mask = crate::AddressMask::empty();
+    for &addr in INSTRUCTION_START_ADDRS {
+        mask.set(addr);
+    }
+    mask
 }
 
 #[cfg(test)]
@@ -98,6 +133,48 @@ mod tests {
         assert_eq!(
             target, SUB_ADDR,
             "JSR's operand must be the sub label's address"
+        );
+    }
+
+    #[test]
+    fn instruction_start_mask_selects_exactly_the_ten_instruction_starts() {
+        let mask = instruction_start_mask();
+        assert_eq!(mask.count() as usize, INSTRUCTION_START_ADDRS.len());
+        for &addr in INSTRUCTION_START_ADDRS {
+            assert!(
+                mask.contains(addr),
+                "${addr:04X} must be an instruction start"
+            );
+        }
+    }
+
+    #[test]
+    fn instruction_start_mask_excludes_every_operand_byte() {
+        // The anti-vacuity half: prove the mask actually DISCRIMINATES
+        // opcode bytes from operand bytes, not just that the listed
+        // addresses are set. Every byte in CODE_BYTES that is NOT an
+        // instruction start must be absent from the mask.
+        let mask = instruction_start_mask();
+        let starts: std::collections::HashSet<u16> =
+            INSTRUCTION_START_ADDRS.iter().copied().collect();
+        let mut operand_byte_checked = false;
+        for i in 0..CODE_BYTES.len() {
+            let addr = LOAD_ADDR + i as u16;
+            if starts.contains(&addr) {
+                continue;
+            }
+            operand_byte_checked = true;
+            assert!(
+                !mask.contains(addr),
+                "${addr:04X} is an operand byte and must not be marked as an instruction start"
+            );
+        }
+        // Guard against a vacuous pass: this fixture DOES have operand
+        // bytes (LDA's #$10, STA's $0400, etc.), so the loop above must
+        // have actually exercised the negative case at least once.
+        assert!(
+            operand_byte_checked,
+            "fixture must contain at least one non-instruction-start byte to test against"
         );
     }
 
