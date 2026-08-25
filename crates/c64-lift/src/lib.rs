@@ -169,4 +169,110 @@ mod tests {
             "the fixture has exactly one AND instruction (AND #$0F)"
         );
     }
+
+    /// `LDX #$03` must load the X register (register offset 1, per the
+    /// 6502.slaspec register layout `[A X Y P]` at `offset=0x00 size=1`)
+    /// with the constant 3. A third independent kind of semantic claim: a
+    /// DIFFERENT register than the A-register checks implicit in the
+    /// branch/call tests above.
+    ///
+    /// The lift doesn't copy the constant directly into the register — it
+    /// goes through a `Unique`-space temporary first (`Copy{Unique<-Const}`
+    /// then `Copy{Register<-Unique}`), the same shape observed for `LDA` in
+    /// this session's exploratory probe. This test chases that chain rather
+    /// than assuming a direct copy, so it reflects what the lift actually
+    /// does instead of a simplified guess.
+    #[test]
+    fn the_lifted_block_loads_x_register_with_the_ldxs_immediate_value() {
+        let block = lift(fixtures::CODE_BYTES, fixtures::LOAD_ADDR as u64)
+            .expect("lift_block must succeed on the fixture");
+
+        const X_REGISTER_OFFSET: u64 = 1;
+
+        let x_register_copies: Vec<(usize, &r2il::Varnode)> = block
+            .ops
+            .iter()
+            .enumerate()
+            .filter_map(|(i, op)| match op {
+                R2ILOp::Copy { dst, src }
+                    if dst.space == SpaceId::Register && dst.offset == X_REGISTER_OFFSET =>
+                {
+                    Some((i, src))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            x_register_copies.len(),
+            1,
+            "LDX #$03 must be the only write to the X register in the fixture"
+        );
+        let (copy_index, src) = x_register_copies[0];
+
+        // Chase the source back one step if it's a Unique-space temporary,
+        // since that's the shape r2sleigh actually emits here.
+        let immediate_value = if src.space == SpaceId::Const {
+            src.offset
+        } else {
+            let source_write = block.ops[..copy_index]
+                .iter()
+                .rev()
+                .find_map(|op| match op {
+                    R2ILOp::Copy {
+                        dst,
+                        src: inner_src,
+                    } if dst.space == src.space
+                        && dst.offset == src.offset
+                        && inner_src.space == SpaceId::Const =>
+                    {
+                        Some(inner_src.offset)
+                    }
+                    _ => None,
+                });
+            source_write.expect(
+                "LDX's register copy must trace back to a Const-sourced write \
+                 into whatever temporary it reads from",
+            )
+        };
+
+        assert_eq!(
+            immediate_value, 0x03,
+            "LDX #$03's immediate value must reach the X register as 3"
+        );
+    }
+
+    /// `DEX` must decrement the X register by exactly 1 — an `IntSub` with
+    /// X as both destination and left operand, and a constant `1` as the
+    /// right operand.
+    #[test]
+    fn the_lifted_block_decrements_x_register_by_one_for_dex() {
+        let block = lift(fixtures::CODE_BYTES, fixtures::LOAD_ADDR as u64)
+            .expect("lift_block must succeed on the fixture");
+
+        const X_REGISTER_OFFSET: u64 = 1;
+
+        let dex_ops: Vec<u64> = block
+            .ops
+            .iter()
+            .filter_map(|op| match op {
+                R2ILOp::IntSub { dst, a, b }
+                    if dst.space == SpaceId::Register
+                        && dst.offset == X_REGISTER_OFFSET
+                        && a.space == SpaceId::Register
+                        && a.offset == X_REGISTER_OFFSET
+                        && b.space == SpaceId::Const =>
+                {
+                    Some(b.offset)
+                }
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(
+            dex_ops,
+            vec![0x01],
+            "DEX must be the only X-register self-subtraction in the \
+             fixture, decrementing by exactly 1"
+        );
+    }
 }
