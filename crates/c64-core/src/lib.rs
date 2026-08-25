@@ -11,6 +11,8 @@
 pub mod fixtures;
 pub mod mask;
 pub mod memory;
+pub mod row_store;
 
 pub use mask::AddressMask;
 pub use memory::{LoadError, Memory, ADDRESS_SPACE_SIZE};
+pub use row_store::{Lane, RowStore};
