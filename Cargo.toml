@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/c64-core"]
+members = ["crates/c64-core", "crates/c64-lift"]
 
 [workspace.package]
 version = "0.1.0"

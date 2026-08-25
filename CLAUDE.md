@@ -78,9 +78,17 @@ own "ask, don't file" convention for cross-repo/licensing decisions.
 ## Probe status
 
 - **Probe B (physics)**: `crates/c64-core` — flat 64 KiB `Memory`, PRG
-  loader, `AddressMask` bitset. In progress.
-- **Probe A (lift parity)**: not started — wires `r2sleigh-lift` against a
-  compiled 6502 `.sla`, diffs against a Ghidra headless-analyzer oracle.
+  loader, `AddressMask` bitset, `RowStore` lane join, materialization
+  enforcement test. In progress.
+- **Probe A (lift parity)**: `crates/c64-lift` — vendored, unmodified
+  Ghidra 6502 SLEIGH spec (`vendor/ghidra-6502/`, Apache-2.0), compiled at
+  build time via `sleigh-compiler` (no Gradle/Java Ghidra build needed —
+  verified), lifted through `r2sleigh-lift`'s existing generic
+  `Disassembler::from_sla`. The fixture's hand-computed BNE/JSR targets are
+  checked against the real lifted R2IL, verified as a real falsifier via a
+  disable-run. **Not yet done**: the full Ghidra-headless-analyzer parity
+  oracle the plan originally specified — see
+  `.claude/plans/c64-falsifier-v1.md` Probe A for the honest gap.
 - **Probe C (transcoding seam)**: not started — R2IL → `ogar-loco`
   Call/FunctionBody, classid under `0xC4XX` `BinaryLifting` (reserved, not
   yet minted — minting is an operator-gated decision, see above).
