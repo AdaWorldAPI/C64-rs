@@ -1,0 +1,10 @@
+[package]
+name = "c64-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "C64/6502 flat 64KiB resident memory substrate — the physics layer (Probe B) of the C64/Ghidra/r2sleigh/OGAR falsifier."
+
+[dependencies]
+
+[dev-dependencies]
