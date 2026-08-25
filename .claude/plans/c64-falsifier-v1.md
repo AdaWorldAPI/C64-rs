@@ -138,6 +138,19 @@ address range must be simultaneously readable as (a) raw bytes via
 
 None of these are triggered yet — Probe A hasn't run.
 
+## Later, not gated: a2ui-rs as the eventual viewer
+
+Once Probe C's `ClassView` projection exists, `AdaWorldAPI/a2ui-rs` is the
+natural render target for a visual memory/disassembly view — it already
+projects `ClassView`-resolved server state to a client via `NodeDelta`/
+`ActionInvoke` with zero-serialization framing (`a2ui-server`/`a2ui-wasm`/
+`a2ui-paint`), and its `Skin::Tile` skin already reads a geographic
+`(x, y)` pair straight out of a 12-byte V3 facet register — structurally
+close to "read a byte's page:offset coordinate out of the same register."
+No work starts here until Probe C's ClassView projection exists; this is a
+forward pointer, not a task in flight. Operator raised this
+(2026-08-25 session) — don't let it drop between now and Probe C.
+
 ## GPL/licensing note
 
 zinc64 (GPLv3), CrabSID, resid-rs are legitimate *behavioral reference*
