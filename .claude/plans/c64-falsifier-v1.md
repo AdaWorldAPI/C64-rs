@@ -261,9 +261,15 @@ resident C64 bytes
         │
    6502 SLEIGH → P-code → R2IL          (Probe A)
         │
-   ogar-loco Call/FunctionBody           ← operator-gated: new classid mint
-   (R2ILOp → Call vocabulary entries,      under 0xC4XX BinaryLifting
-    classid under 0xC4XX BinaryLifting)
+   ruff_r2il intake arm                  ← the EXISTING ore→furnace→slag
+   (FunctionBehavior::from_blocks over      pipeline (AdaWorldAPI/ruff,
+    the same R2ILBlocks → FlatFact rows      crates/ruff_r2il) — do not
+    + addressed slag → sink → SoA V4)        build a second seam
+        │
+   ogar-loco Call/FunctionBody           ← classid homes now SPLIT:
+   (R2ILOp → Call vocabulary entries)      0xC4XX BinaryLifting = lift/IR
+                                           0xC6XX Mmio = platform hardware
+                                           (minted 2026-08-25, OGAR #284)
         │
    ClassView (THINK arm)                 ← raw/decoded/banked memory readings
    reads the SAME resident bytes
@@ -308,9 +314,27 @@ No work starts here until Probe C's ClassView projection exists; this is a
 forward pointer, not a task in flight. Operator raised this
 (2026-08-25 session) — don't let it drop between now and Probe C.
 
-## GPL/licensing note
+## GPL/licensing note (fence widened 2026-08-25, operator-approved)
 
-zinc64 (GPLv3), CrabSID, resid-rs are legitimate *behavioral reference*
-sources for hardware register semantics (VIC-II/SID/CIA) — read, never
-transcribed. Only Ghidra's Apache-2.0 SLEIGH specs are a lawful source for
-anything that becomes a minted `ogar-vocab` concept.
+zinc64 (GPLv3), Frodo (GPLv2), CrabSID, resid-rs are legitimate *behavioral
+reference* sources for hardware register semantics (VIC-II/SID/CIA) — read,
+never transcribed. Lawful sources for anything that becomes a minted
+`ogar-vocab` concept: Ghidra's Apache-2.0 SLEIGH specs, permissively-licensed
+implementations (`AdaWorldAPI/rust64`, MIT), and vendor datasheets. The
+original SLEIGH-only wording assumed the only hardware references were GPL
+emulators; rust64 being MIT widened the set, not the rule.
+
+## Probe C classid homes (recorded 2026-08-25)
+
+`ConceptDomain::Mmio` (`0xC6XX`) is MINTED (OGAR PR #284): `mmio_chip`
+(0xC601), `mmio_register` (0xC602), `rom_image` (0xC603),
+`machine_memory_map` (0xC604) — container kinds only, per the 0x08XX OCR
+precedent. `0xC4XX BinaryLifting` remains the (still zero-row) lift/IR
+home. The hard rule above survives the mint verbatim: concrete registers
+and the 56 mnemonics are content rows / `ogar-loco` `FnIndex` entries,
+never classids.
+
+Probe C's intake route is `ruff_r2il` (sibling-checkout-only crate — its
+path deps escape the ruff repo, so the harvest lives THERE, path-unified
+with r2sleigh, never as a git dep here: two r2il SourceIds are two
+incompatible type universes).

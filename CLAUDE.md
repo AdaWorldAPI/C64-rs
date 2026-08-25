@@ -52,11 +52,25 @@ repo exists to answer.
   -empty classid home for this domain, and its own doc comment names Ghidra
   and r2sleigh explicitly as anticipated dual consumers. Don't re-derive
   this — read the plan doc's Probe C section first.
-- **GPL/licensing boundary.** zinc64 (GPLv3), CrabSID, resid-rs may be read
-  for behavioral/test-vector reference (hardware register semantics, timing)
+  **Widened 2026-08-25 (operator-directed):** platform HARDWARE concepts
+  now have their own domain — `ConceptDomain::Mmio` (`0xC6XX`, "one hex
+  digit short of the C64", OGAR PR #284): `mmio_chip` / `mmio_register` /
+  `rom_image` / `machine_memory_map`, container KINDS only. `0xC4XX` stays
+  the architecture-agnostic lift/IR home; a `$D021` register is a platform
+  fact, not an IR concept. The opcode rule above is UNCHANGED by the mint —
+  registers and mnemonics are content rows read through the ClassView.
+- **GPL/licensing boundary (fence widened 2026-08-25, operator-approved).**
+  zinc64 (GPLv3), Frodo (GPLv2), CrabSID, resid-rs may be read for
+  behavioral/test-vector reference (hardware register semantics, timing)
   but their code is never transcribed into this repo or into `ogar-vocab`.
-  Only Ghidra's Apache-2.0 SLEIGH specs are a lawful source for minted
-  classid concepts.
+  Lawful sources for minted classid concepts: Ghidra's Apache-2.0 SLEIGH
+  specs, **permissively-licensed implementations (`AdaWorldAPI/rust64` is
+  MIT — its `vic.rs`/`sid.rs`/`cia.rs` are transcribable hardware
+  reference, which SLEIGH is not: SLEIGH gives opcodes, it says nothing
+  about `$D021`)**, and vendor datasheets (6526/6567/6581 register facts).
+  The original fence named only SLEIGH because the assumed hardware
+  references were GPL emulators; rust64 being MIT changes the set, not
+  the rule.
 - **Kill conditions are real exit criteria, not decoration.** See the plan
   doc. If Probe A's parity oracle diverges on a legal 6502 instruction, or
   Probe C needs per-instruction Java objects to preserve required semantics,
