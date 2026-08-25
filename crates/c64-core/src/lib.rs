@@ -8,6 +8,7 @@
 //! `.claude/plans/c64-falsifier-v1.md` for the full A/B/C probe sequence
 //! and why this crate stops here on purpose.
 
+pub mod fixtures;
 pub mod mask;
 pub mod memory;
 
