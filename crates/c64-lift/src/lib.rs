@@ -32,6 +32,7 @@ mod tests {
     use super::*;
     use c64_core::fixtures;
     use r2il::opcode::R2ILOp;
+    use r2il::space::SpaceId;
 
     #[test]
     fn the_vendored_spec_loads_without_error() {
@@ -116,6 +117,56 @@ mod tests {
         assert_eq!(
             return_count, 2,
             "the fixture has exactly two RTS instructions (main's and sub's)"
+        );
+    }
+
+    /// Data-movement parity: `STA $0400` must produce exactly one op
+    /// writing into the RAM address space at offset $0400. This is a
+    /// second, independent kind of semantic claim from the branch/call
+    /// target checks above — it exercises the SLEIGH spec's addressing-
+    /// mode-to-RAM-space mapping, not its control-flow constructors.
+    #[test]
+    fn the_lifted_block_writes_into_ram_at_the_stas_hand_computed_address() {
+        let block = lift(fixtures::CODE_BYTES, fixtures::LOAD_ADDR as u64)
+            .expect("lift_block must succeed on the fixture");
+
+        let ram_writes: Vec<u64> = block
+            .ops
+            .iter()
+            .filter_map(|op| match op {
+                R2ILOp::Copy { dst, .. } if dst.space == SpaceId::Ram => Some(dst.offset),
+                R2ILOp::Store { addr, .. } if addr.space == SpaceId::Ram => Some(addr.offset),
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(
+            ram_writes,
+            vec![0x0400],
+            "STA $0400 is the fixture's only RAM-space write; its target \
+             must be exactly $0400, the address hand-computed from the \
+             instruction's own operand bytes (00 04, little-endian)"
+        );
+    }
+
+    /// `AND #$0F` must lift through an `IntAnd` op — proving the SLEIGH
+    /// spec's logical-AND semantics actually reach R2IL, not just that
+    /// SOME ops were produced (the anti-vacuity half of the data-movement
+    /// coverage this test file otherwise lacked).
+    #[test]
+    fn the_lifted_block_contains_an_int_and_op_for_the_and_instruction() {
+        let block = lift(fixtures::CODE_BYTES, fixtures::LOAD_ADDR as u64)
+            .expect("lift_block must succeed on the fixture");
+
+        let and_count = block
+            .ops
+            .iter()
+            .filter(|op| matches!(op, R2ILOp::IntAnd { .. }))
+            .count();
+
+        assert_eq!(
+            and_count, 1,
+            "the fixture has exactly one AND instruction (AND #$0F)"
         );
     }
 }
