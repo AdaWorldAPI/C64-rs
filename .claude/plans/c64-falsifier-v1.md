@@ -119,14 +119,97 @@ go.
   likely substantial effort (Ghidra's build is large), left for a future
   session rather than rushed.
 
+**Ghidra-headless feasibility, checked read-only (not attempted) —
+2026-08-25:** confirmed genuinely blocked, not just "not yet tried."
+
+- `Ghidra/RuntimeScripts/support/analyzeHeadless` (the headless CLI
+  entrypoint) exists as source and delegates to `launch.sh`, which
+  resolves its Java classpath from either an assembled distribution's
+  `lib/` directory (built by Gradle's `assembleDistribution` task) or a
+  `gradle prepDev` dev-classpath generation step. **Neither exists in this
+  checkout** — no `.jar` files anywhere, no `support/` directory outside
+  `gradle/support` (build tooling, not the runtime one), no git tags
+  suggesting a downloaded release.
+- `pyghidra` (checked on PyPI, versions 3.1.0 down to 0.0.0 all listed)
+  does **not** bundle Ghidra — it's a bridge library that requires
+  `GHIDRA_INSTALL_DIR` pointing at an already-built distribution. It would
+  not shortcut the same build requirement.
+- **Verdict: genuinely blocked pending a future session with real build
+  budget**, not a same-session oversight. Ghidra's own build (Gradle,
+  Java, likely tens of minutes to hours depending on what's cached) is a
+  different scale of effort than `sleigh-compiler`'s standalone C++
+  compile, which is what made Probe A's SLEIGH-spec compilation tractable
+  in a single session. Do not conflate the two when scoping future work —
+  compiling ONE `.slaspec` and running Ghidra's FULL headless analyzer
+  pipeline are unrelated amounts of effort, even though both ultimately
+  touch "Ghidra."
+
 ## Probe B — physics (this repo, `crates/c64-core`)
 
 - `Memory`: flat `[u8; 65536]`, `load_prg`. Shipped.
 - `AddressMask`: packed bitset, `and`/`or`/`and_not`/`count`, one named
   `materialize_addresses` exit. Shipped.
-- Next: populate two `AddressMask`s from a `lift_block()` run — "byte
-  belongs to an instruction" and "byte is an instruction start" — as the
-  connective tissue to Probe A, still without any Java/FFM involvement.
+- `RowStore`: joins `Memory` with named `AddressMask` lanes
+  (`crates/c64-core/src/row_store.rs`), wired against the fixture's
+  `instruction_start` lane. Shipped.
+- A source-text materialization-allowlist enforcement test
+  (`crates/c64-core/tests/api_surface.rs`), the Rust equivalent of
+  `lance-graph-java`'s `GraphHopTest` reflective allowlist. Shipped.
+- Next: extend the `RowStore` lane population to draw from a REAL
+  `c64-lift::lift()` run (opcode-class / instruction-length lanes derived
+  from the actual R2IL block), not just the fixture's hand-transcribed
+  `instruction_start_mask()` — this is the actual Probe A/B/C connective
+  tissue the plan always intended, now unblocked since Probe A is real.
+
+## Session summary — 2026-08-24/25 autonomous overnight session
+
+8 PRs merged, all test-covered, all clippy/fmt-clean, every parity claim
+verified via at least one disable-run (red-then-green), not just asserted:
+
+1. Scaffold: `c64-core` physics (`Memory`, `AddressMask`), doctrine, this
+   plan doc.
+2. Docs: noted `a2ui-rs` as the eventual Probe C viewer target.
+3. Bridged the fixture's known instruction boundaries into `AddressMask`.
+4. Ported `lance-graph-java`'s materialization-allowlist enforcement to a
+   Rust source-text scan.
+5. Added `RowStore`, joining `Memory` + named `AddressMask` lanes.
+6. **Probe A actually shipped**: vendored the real, unmodified Ghidra 6502
+   SLEIGH spec (Apache-2.0), compiled it at build time via `sleigh-compiler`
+   (no Ghidra Gradle build needed — a real finding, corrects the plan's
+   original assumption), lifted it through `r2sleigh-lift`'s existing
+   generic `Disassembler::from_sla`, and checked the fixture's
+   hand-computed BNE/JSR targets against the real lifted R2IL.
+7. Extended Probe A's parity coverage to data movement (`STA`, `AND`).
+8. Extended Probe A's parity coverage to a second register (`LDX`/`DEX`),
+   catching and fixing a wrong assumption about the lift's `Unique`-space
+   temporary shape along the way — a small, real instance of "verify
+   before assuming" catching itself.
+
+**What's shipped and real**: a genuine, running, falsifiable 6502→R2IL
+lift, using zero hand-written decode logic, with 7 independent parity
+claims (2 control-flow, 2 data-movement, 2 register, 1 nonempty-block
+sanity) each proven to actually discriminate correct from incorrect
+behavior via disable-run.
+
+**What's still open, honestly**:
+- The full Ghidra-headless parity oracle (see above) — genuinely blocked
+  on build effort, not scoped away.
+- Probe C (the OGAR/`ogar-loco`/classid transcoding seam) — spec only,
+  correctly gated on operator sign-off for classid minting (see
+  `CLAUDE.md`'s hard rules). Nothing here should proceed without that.
+- `RowStore`'s lane population is still fixture-hand-transcribed, not yet
+  drawing from a real `lift()` run — the natural next increment once a
+  future session picks this back up, now that Probe A exists to draw from.
+- No end-to-end demonstration of Probe C's stated success condition (one
+  resident address range readable as raw bytes / `ogar-loco` Call sequence
+  / Java-facing view with zero divergence) — this remains entirely
+  unbuilt, correctly, pending the operator-gated classid decision.
+
+Every hard rule in `CLAUDE.md` held throughout: no 6502 decoder was
+written (SLEIGH + r2sleigh's existing generic table did all decode work),
+no classid was minted, no sibling repo was modified, no GPL code was
+transcribed (only Apache-2.0 Ghidra SLEIGH specs were vendored, with
+provenance in `vendor/ghidra-6502/NOTICE.md`).
 
 ## Probe C — the transcoding seam (spec only, not implemented)
 
