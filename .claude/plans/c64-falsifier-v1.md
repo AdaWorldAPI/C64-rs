@@ -119,6 +119,49 @@ go.
   likely substantial effort (Ghidra's build is large), left for a future
   session rather than rushed.
 
+**⊘ SUPERSESSION FOUND UPSTREAM (2026-08-25) — the lift half of this was
+already ruled retired, and this repo took the sanctioned path by luck.**
+
+`AdaWorldAPI/lance-graph-java` carries a dated ruling,
+`E-LGJ-GHIDRA-G1-G2-SUPERSEDED-BY-R2IL-1` (2026-08-18, recorded in its
+`.claude/board/LATEST_STATE.md`): its own planned Ghidra waves — a
+bespoke `analyzeHeadless` lift script plus a hand-rolled LE program-image
+format — are **superseded, not merely deprioritised**, because *"direct
+r2il/r2ssa consumption solves the upstream seam."*
+
+Read against this repo: **`crates/c64-lift` is the sanctioned shape**
+(r2sleigh consuming Ghidra's own unmodified `.sla`), and the
+`analyzeHeadless` route this session spent effort trying to build is the
+retired one. That was arrived at by accident, not by reading the ruling —
+recorded here so the next session does not re-derive it or, worse,
+re-attempt the retired path.
+
+**The nuance that survives, and it matters:**
+`lance-graph-java/.claude/plans/ghidra-integration-v1.md` names **two**
+distinct Ghidra roles, and only the first is superseded:
+
+1. **Ghidra as lift-time compiler** (its G1/G2) — SUPERSEDED by direct
+   r2sleigh/R2IL consumption. This is the half c64-lift already replaces.
+2. **Ghidra as parity oracle** (its G4) — **NOT superseded.** The
+   instrument is Ghidra's own in-tree sequential `PcodeEmulator`
+   (`Ghidra/Framework/Emulation/src/main/java/ghidra/pcode/emu/`), which
+   executes the same P-code the lift produces. That plan describes it as
+   the tesseract-rs byte-parity method transplanted: diff against the
+   reference *implementation*, not only against our own scalar rewrite.
+
+So Probe A's still-missing oracle is **`PcodeEmulator`, not
+`analyzeHeadless`** — a better instrument than the one this session was
+reaching for, and still gated on a real Ghidra build (below).
+
+**A standing boundary in that same plan, recorded for awareness:**
+*"this session does not build toward r2sleigh, ruff, or R2IL"* — its
+r2sleigh/R2IL integration is arriving via a separate `ruff_r2il` arm
+(`AdaWorldAPI/ruff` PR #94 landed; PR2/PR3 pending as of 2026-08-18).
+That boundary is scoped to lance-graph-java, so this repo is not in
+violation — but two arms are now building r2sleigh integration
+independently and a future session should reconcile them rather than run
+both designs in parallel.
+
 **Ghidra-headless feasibility, checked read-only (not attempted) —
 2026-08-25:** confirmed genuinely blocked, not just "not yet tried."
 
